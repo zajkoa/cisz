@@ -6,7 +6,7 @@ export function getResourceTitle(r: any): string {
 }
 
 export function buildFHIRUrl(
-    reference: string, 
+    reference: string,
     patientRef: string | null = null,
     organizationRef: string | null = null
 ): string {
@@ -34,6 +34,7 @@ export function buildFHIRUrl(
 
 export function isEagerPath(resourceType: string, path: string): boolean {
     const meta = CISZ_SCHEMA[resourceType];
+
     return meta?.eager?.includes(path) || false;
 }
 
@@ -43,6 +44,7 @@ function toRefString(val: any): string | null {
     if (typeof val === 'string') return val;
     if (typeof val.reference === 'string') return val.reference;
     if (typeof val.reference === 'object' && val.reference) return toRefString(val.reference);
+
     return null;
 }
 
@@ -69,11 +71,12 @@ export function extractPatientRef(r: any): string | null {
 
 export function extractOrganizationRef(r: any): string | null {
     if (!r || typeof r !== 'object') return null;
+
     if (r.resourceType === 'Organization' && r.id) return `Organization/${r.id}`;
 
     if (r.performer) {
-        console.log("performer")
         const performers = Array.isArray(r.performer) ? r.performer : [r.performer];
+
         for (const p of performers) {
             const org = toRefString(p?.actor) || toRefString(p?.reference) || toRefString(p?.onBehalfOf) || toRefString(p);
             if (org?.startsWith('Organization/')) return org;
@@ -81,12 +84,14 @@ export function extractOrganizationRef(r: any): string | null {
     }
 
     const idents = Array.isArray(r.identifier) ? r.identifier : (r.identifier ? [r.identifier] : []);
+
     for (const ident of idents) {
         const assignerOrg = toRefString(ident?.assigner);
         if (assignerOrg?.startsWith('Organization/')) return assignerOrg;
     }
 
     const standardFields = [r.managingOrganization, r.owner, r.serviceProvider, r.custodian];
+
     for (const field of standardFields) {
         const org = toRefString(field);
         if (org?.startsWith('Organization/')) return org;

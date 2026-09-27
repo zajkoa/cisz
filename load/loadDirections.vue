@@ -8,6 +8,9 @@
 				<div class="col-2">
 					<DBEdit :form="form" field="authored" clear />
 				</div>
+				<div class="col-2">
+					<DBEdit :form="form" field="count" />
+				</div>
 			</div>
 
 			<DBGrid :store="storeDirections" :config="configDirections" @select="data => onSelect(data)" ref="gridDirections"></DBGrid>
@@ -24,8 +27,8 @@ import { query } from '@/core/components/DB/api';
 import { toastError } from '@/core/helpers/toastify';
 
 import { clientCISZ } from '../ClientCISZ';
-import { findContragents, openReference } from '../index';
 import { parseResource } from '../api';
+import { findContragents, openReference } from '../index';
 
 export default defineComponent({
 	inheritAttrs: false,
@@ -82,6 +85,29 @@ export default defineComponent({
 					reference: {
 						description: 'Ссылка',
 						type: 'STRING'
+					},
+					count: {
+						description: 'Кол-во',
+						type: {
+							enum: [
+								{
+									id: 10,
+									name: '10'
+								},
+								{
+									id: 25,
+									name: '25'
+								},
+								{
+									id: 50,
+									name: '50'
+								},
+								{
+									id: 100,
+									name: '100'
+								}
+							]
+						}
 					}
 				}
 			}
@@ -156,52 +182,10 @@ export default defineComponent({
 		const storeDirections = new DBStore('find_directions', configDirections);
 		storeDirections.model.offLine = true;
 
-		const findDirections = async () => {
+		const loadDirections = async (url) => {
 			storeDirections.clear();
 
-			const { reference, authored } = storeParams.data;
-
-			const params = {
-				"code-concept": "patho-histology",
-				_profile: "https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch",
-				_count: 1000,
-				status: "active"
-			}
-
-			if (reference) {
-				params['assigner'] = reference;
-			} else {
-				const { contragent, _contragent } = storeParams.data;
-
-				if (contragent) {
-					const data = await findContragents({ name: _contragent }, true);
-
-					if (data) {
-						const { reference } = data;
-
-						if (reference) {
-							storeParams.data['reference'] = reference;
-
-							params['assigner'] = reference;
-
-							await query({
-								table: 'contragents',
-								method: 'save',
-								data: { id: contragent, reference }
-							});
-						}
-					} else {
-						return
-					}
-				}
-			}
-
-			if (authored) {
-				params['authored'] = authored;
-			}
-
-			const { type, entry } = await client.request(`Organization/${client.organizationId}/ServiceRequest?
-			${Object.entries(params).map(([key, value]) => `${key}=${value}`).join('&')}`);
+			const { type, entry, link } = await client.request(url);
 
 			if (type == 'searchset') {
 				for (const row of entry) {
@@ -251,12 +235,89 @@ export default defineComponent({
 					}
 				}
 			}
+
+			const buttons = [
+				{
+					find: {
+						caption: 'Поиск',
+						title: 'Поиск',
+						class: 'btn btn-add',
+						onClick: () => findDirections()
+					}
+				}
+			];
+
+			const { count } = storeParams.data;
+
+			for (const item of link) {
+				const { relation, url } = item;
+
+				if (relation == 'next') {
+					buttons.push({
+						next: {
+							caption: `Следующие ${count} направлений >>`,
+							title: 'Следующие',
+							class: 'btn btn-light',
+							onClick: async () => await loadDirections(url)
+						}
+					})
+				}
+			}
+
+			gridDirections.value.controller.createPanelFun(buttons);
+		}
+
+		const findDirections = async () => {
+			const { reference, authored, count } = storeParams.data;
+
+			const params = {
+				"code-concept": "patho-histology",
+				_profile: "https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch",
+				_count: count,
+				status: "active"
+			}
+
+			if (reference) {
+				params['assigner'] = reference;
+			} else {
+				const { contragent, _contragent } = storeParams.data;
+
+				if (contragent) {
+					const data = await findContragents({ name: _contragent }, true);
+
+					if (data) {
+						const { reference } = data;
+
+						if (reference) {
+							storeParams.data['reference'] = reference;
+
+							params['assigner'] = reference;
+
+							await query({
+								table: 'contragents',
+								method: 'save',
+								data: { id: contragent, reference }
+							});
+						}
+					} else {
+						return
+					}
+				}
+			}
+
+			if (authored) {
+				params['authored'] = authored;
+			}
+
+			const url = `Organization/${client.organizationId}/ServiceRequest?${Object.entries(params).map(([key, value]) => `${key}=${value}`).join('&')}`;
+
+			await loadDirections(url);
 		}
 
 		const onSelect = (data) => { }
 
 		onMounted(async () => {
-			await storeParams.defaultsData(defaults);
+			await storeParams.defaultsData({ count: 10, ...defaults });
 		})
 
 		return {

@@ -300,7 +300,7 @@ class ClientCISZ {
 
             stateStore.state.load = true;
 
-            const url = endpoint.startsWith(fhirBaseUri) ? `${endpoint}` : `${fhirBaseUri}/${endpoint}`;
+            const url = endpoint.toUpperCase().startsWith(fhirBaseUri.toUpperCase()) ? endpoint : `${fhirBaseUri}/${endpoint}`;
 
             const response = await fetch(
                 url,
@@ -588,7 +588,7 @@ class ClientCISZ {
             const needsLoad = !resource.display || (isEager && !resource.resource);
 
             if (needsLoad) {
-                const url = buildFHIRUrl(resource.reference, activePatient, activeOrganization);               
+                const url = buildFHIRUrl(resource.reference, activePatient, activeOrganization);
                 try {
                     const fetched = await this.request(url);
                     if (fetched && !fetched.issue) {
