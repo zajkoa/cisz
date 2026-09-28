@@ -404,7 +404,7 @@ export default {
                             _count: 1000,
                             // "code-concept": "patho-histology",
                             _profile: profileDirection,
-                            // performer: `Organization/${client.organizationId}`
+                            performer: `Organization/${client.organizationId}`
                         }
 
                         if (referenceContragent) {

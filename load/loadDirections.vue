@@ -30,6 +30,25 @@ import { clientCISZ } from '../ClientCISZ';
 import { parseResource } from '../api';
 import { findContragents, openReference } from '../index';
 
+const statuses = [
+	{
+		id: 'active',
+		name: 'Активно'
+	},
+	{
+		id: 'completed',
+		name: 'Завершено'
+	},
+	{
+		id: 'revoked',
+		name: 'Отменено'
+	},
+	{
+		id: 'entered-in-error',
+		name: 'Введено по ошибке'
+	}
+]
+
 export default defineComponent({
 	inheritAttrs: false,
 
@@ -127,6 +146,12 @@ export default defineComponent({
 						hide: true
 					}
 				},
+				status: {
+					description: "Статус",
+					type: {
+						enum: statuses
+					}
+				},
 				name: {
 					description: "Наименование",
 					type: 'STRING'
@@ -192,7 +217,7 @@ export default defineComponent({
 					const { resourceType } = row.resource;
 
 					if (resourceType == 'ServiceRequest') {
-						const { location, requester, reason, specimen, subject } = row.resource;
+						const { location, requester, reason, specimen, subject, status } = row.resource;
 
 						await client.loadReference(location);
 						await client.loadReference(requester);
@@ -224,6 +249,7 @@ export default defineComponent({
 								}
 
 								direction.location = responsePGINotion.data._customer;
+								direction.status = status;
 								direction.date_send = responsePGINotion.data.date_send;
 								direction.data = responsePGINotion.data;
 							}
