@@ -62,46 +62,113 @@
     <!-- 4. Табы сбоку -->
     <template v-else-if="item.tabs">
         <div class="row" v-if="!hideTabs"> 
-            <div class="col-md-3"> 
+            <div class="col-md-4"> 
                 <div 
                     class="nav flex-column nav-pills overflow-auto flex-nowrap pr-1" 
                     role="tablist" 
                     aria-orientation="vertical"
                     style="height: 55vh;"
                 > 
-                    <button 
-                        v-for="(tab, idx) in item.tabs"  
-                        :key="idx" 
-                        class="nav-link text-left text-start text-truncate flex-shrink-0 mb-1 px-3 py-2 rounded-3 border-0"  
-                        :class="{ 
-                            'active shadow-sm fw-bold': activeTab === idx,
-                            'text-secondary': activeTab !== idx 
-                        }"  
-                        @click.prevent="activeTab = idx"  
-                        type="button" 
-                        role="tab"
-                        style="outline: none;" 
-                        :title="tab.label"
-                    >
-                        {{ tab.label }} 
-                    </button>
+                    <template v-for="(tab, idx) in item.tabs" :key="idx">
+                        
+                        <template v-if="tab.subTabs">
+                            <div 
+                                class="nav-link p-0 d-flex align-items-stretch mb-1 w-100 border-0 rounded-3" 
+                                :class="activeTab === idx ? 'active shadow-sm' : 'bg-light text-secondary'"
+                            >
+                                <div 
+                                    class="flex-grow-1 text-left text-start text-truncate px-3 py-2 fw-bold"
+                                    @click.prevent="activeTab = idx"
+                                    style="cursor: pointer; user-select: none;"
+                                    :title="tab.label"
+                                >
+                                    {{ tab.label }}
+                                </div>
+                                <div 
+                                    class="px-3 py-2 d-flex align-items-center justify-content-center"
+                                    @click.prevent.stop="toggleGroup(idx)"
+                                    style="cursor: pointer; min-width: 40px; border-left: 1px solid rgba(128,128,128,0.2);"
+                                >
+                                    <i :class="expandedGroups.includes(idx) ? 'icon icon-chevron-up' : 'icon icon-chevron-down'"></i>
+                                </div>
+                            </div>
+
+                            <div v-show="expandedGroups.includes(idx)" class="pl-2 border-left ml-2 mb-2">
+                                <button 
+                                    v-for="(subTab, subIdx) in tab.subTabs"  
+                                    :key="subIdx" 
+                                    class="nav-link text-left text-start text-truncate flex-shrink-0 mb-1 px-3 py-1 rounded-3 border-0 w-100"  
+                                    :class="{ 
+                                        'active shadow-sm fw-bold': activeTab === `${idx}-${subIdx}`,
+                                        'text-secondary': activeTab !== `${idx}-${subIdx}` 
+                                    }"  
+                                    @click.prevent="activeTab = `${idx}-${subIdx}`"  
+                                    type="button" 
+                                    role="tab"
+                                    style="outline: none;" 
+                                    :title="subTab.label"
+                                >
+                                    {{ subTab.label }} 
+                                </button>
+                            </div>
+                        </template>
+
+                        <template v-else>
+                            <button 
+                                class="nav-link text-left text-start text-truncate flex-shrink-0 mb-1 px-3 py-2 rounded-3 border-0 w-100 fw-bold"  
+                                :class="activeTab === idx ? 'active shadow-sm' : 'bg-light text-secondary'"  
+                                @click.prevent="activeTab = idx"  
+                                type="button" 
+                                role="tab"
+                                style="outline: none;" 
+                                :title="tab.label"
+                            >
+                                {{ tab.label }} 
+                            </button>
+                        </template>
+                    </template>
                 </div> 
             </div> 
         
-            <div class="col-md-9"> 
+            <div class="col-md-8"> 
                 <div 
                     class="tab-content bg-light shadow-sm rounded-3 p-2 overflow-auto"
                     style="height: 55vh;"
                 > 
-                    <div 
-                        v-for="(tab, idx) in item.tabs" 
-                        :key="idx" 
-                        class="tab-pane fade" 
-                        :class="{ 'show active': activeTab === idx }" 
-                        role="tabpanel"
-                    >
-                        <ViewCISZItem v-for="(tabItem, i) in tab.value" :key="i" :item="tabItem" :hideTabs="hideTabs" />
-                    </div> 
+                    <template v-for="(tab, idx) in item.tabs" :key="'content-'+idx">
+                        <template v-if="tab.subTabs">
+                            
+                            <div 
+                                class="tab-pane fade" 
+                                :class="{ 'show active': activeTab === idx }" 
+                                role="tabpanel"
+                            >
+                                <template v-for="(subTab, subIdx) in tab.subTabs" :key="'all-'+subIdx">
+                                    <ViewCISZItem v-for="(tabItem, i) in subTab.value" :key="i" :item="tabItem" :hideTabs="hideTabs" />
+                                </template>
+                            </div>
+
+                            <div 
+                                v-for="(subTab, subIdx) in tab.subTabs" 
+                                :key="'sub-'+subIdx" 
+                                class="tab-pane fade" 
+                                :class="{ 'show active': activeTab === `${idx}-${subIdx}` }" 
+                                role="tabpanel"
+                            >
+                                <ViewCISZItem v-for="(tabItem, i) in subTab.value" :key="i" :item="tabItem" :hideTabs="hideTabs" />
+                            </div> 
+                        </template>
+
+                        <template v-else>
+                            <div 
+                                class="tab-pane fade" 
+                                :class="{ 'show active': activeTab === idx }" 
+                                role="tabpanel"
+                            >
+                                <ViewCISZItem v-for="(tabItem, i) in tab.value" :key="i" :item="tabItem" :hideTabs="hideTabs" />
+                            </div> 
+                        </template>
+                    </template>
                 </div> 
             </div> 
         </div> 
@@ -112,7 +179,14 @@
                 style="height: 55vh;"
             > 
                 <template v-for="(tab, idx) in item.tabs" :key="idx">
-                    <ViewCISZItem v-for="(tabItem, i) in tab.value" :key="i" :item="tabItem" :hideTabs="hideTabs" />
+                    <template v-if="tab.subTabs">
+                        <template v-for="(subTab, subIdx) in tab.subTabs" :key="subIdx">
+                            <ViewCISZItem v-for="(tabItem, i) in subTab.value" :key="i" :item="tabItem" :hideTabs="hideTabs" />
+                        </template>
+                    </template>
+                    <template v-else>
+                        <ViewCISZItem v-for="(tabItem, i) in tab.value" :key="i" :item="tabItem" :hideTabs="hideTabs" />
+                    </template>
                 </template>
             </div> 
         </div>
@@ -217,9 +291,21 @@ export default defineComponent({
     },
     setup() {
         const activeTab = ref(0);
+        
+        const expandedGroups = ref([]); 
+
+        const toggleGroup = (idx) => {
+            if (expandedGroups.value.includes(idx)) {
+                expandedGroups.value = expandedGroups.value.filter(i => i !== idx);
+            } else {
+                expandedGroups.value.push(idx);
+            }
+        };
 
         return {
-            activeTab
+            activeTab,
+            expandedGroups,
+            toggleGroup
         };
     }
 })
