@@ -291,10 +291,13 @@ class ClientCISZ {
         if (this.token) {
             const headers = {
                 'Authorization': `Bearer ${this.token}`,
-                'cache': "no-store",
                 // 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': origin,
                 'Origin': origin,
+                'cache': "no-store",
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
                 ...options.headers
             };
 
@@ -302,13 +305,15 @@ class ClientCISZ {
 
             const url = endpoint.toUpperCase().startsWith(fhirBaseUri.toUpperCase()) ? endpoint : `${fhirBaseUri}/${endpoint}`;
 
-            const response = await fetch(
-                url,
-                {
-                    ...options,
-                    headers
-                }
-            );
+            const params = {
+                'cache': "no-store",
+                ...options,
+                headers
+            }
+
+            console.log(params);
+
+            const response = await fetch(url, params);
 
             stateStore.state.load = false;
 
