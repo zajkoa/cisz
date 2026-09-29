@@ -273,3 +273,18 @@ export async function findPatients(defaults: any = {}, select = false, notFound 
         })
     })
 }
+
+export async function loadReference(reference: string) {
+    const client = clientCISZ();
+
+    try {
+        const resource = await client.request(reference);
+        const patientRef = resource?.subject?.reference || (reference.startsWith('Patient/') ? reference.split('/').slice(0, 2).join('/') : null);
+
+        await client.resolveDisplayNames(resource, patientRef);
+
+        return resource;
+    } catch (error) {
+        return null;
+    }
+}
