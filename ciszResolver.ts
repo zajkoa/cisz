@@ -51,19 +51,26 @@ function toRefString(val: any): string | null {
 export function extractPatientRef(r: any): string | null {
     if (!r || typeof r !== 'object') return null;
 
-    if (r.resourceType === 'Patient' && r.id) return `Patient/${r.id}`;
-
-    if (r.subject) {
-        const subjects = Array.isArray(r.subject) ? r.subject : [r.subject];
-        for (const s of subjects) {
-            const ref = toRefString(s);
+    if (r.resourceType) {
+        const meta = CISZ_SCHEMA[r.resourceType];
+        if (meta?.getPatientRef) {
+            const ref = meta.getPatientRef(r);
             if (ref?.startsWith('Patient/')) return ref;
         }
     }
 
-    if (r.patient) {
-        const ref = toRefString(r.patient);
-        if (ref?.startsWith('Patient/')) return ref;
+    if (r.resourceType === 'Patient' && r.id) {
+        return `Patient/${r.id}`;
+    }
+
+    const fallbackFields = [r.subject, r.patient];
+    for (const field of fallbackFields) {
+        if (!field) continue;
+        const items = Array.isArray(field) ? field : [field];
+        for (const item of items) {
+            const ref = toRefString(item);
+            if (ref?.startsWith('Patient/')) return ref;
+        }
     }
 
     return null;
@@ -72,35 +79,59 @@ export function extractPatientRef(r: any): string | null {
 export function extractOrganizationRef(r: any): string | null {
     if (!r || typeof r !== 'object') return null;
 
-    if (r.resourceType === 'Organization' && r.id) return `Organization/${r.id}`;
+    if (r.resourceType) {
+        const meta = CISZ_SCHEMA[r.resourceType];
+        if (meta?.getOrganizationRef) {
+            const ref = meta.getOrganizationRef(r);
+            if (ref?.startsWith('Organization/')) return ref;
+        }
+    }
+
+    if (r.resourceType === 'Organization' && r.id) {
+        return `Organization/${r.id}`;
+    }
+
+    const directFields = [
+        r.managingOrganization,
+        r.serviceProvider,
+        r.custodian,
+        r.owner,
+        r.providedBy,
+        r.authority
+    ];
+
+    for (const field of directFields) {
+        const ref = toRefString(field);
+        if (ref?.startsWith('Organization/')) return ref;
+    }
 
     if (r.performer) {
         const performers = Array.isArray(r.performer) ? r.performer : [r.performer];
 
         for (const p of performers) {
-            const org = toRefString(p?.actor) || toRefString(p?.reference) || toRefString(p?.onBehalfOf) || toRefString(p);
-            if (org?.startsWith('Organization/')) return org;
+            // В performer ссылка может лежать прямо в p, либо в p.actor, либо в p.onBehalfOf
+            const candidates = [p, p?.actor, p?.onBehalfOf];
+            for (const cand of candidates) {
+                const ref = toRefString(cand);
+                if (ref?.startsWith('Organization/')) return ref;
+            }
         }
     }
 
-    const idents = Array.isArray(r.identifier) ? r.identifier : (r.identifier ? [r.identifier] : []);
-
-    for (const ident of idents) {
-        const assignerOrg = toRefString(ident?.assigner);
-        if (assignerOrg?.startsWith('Organization/')) return assignerOrg;
-    }
-
-    const standardFields = [r.managingOrganization, r.owner, r.serviceProvider, r.custodian];
-
-    for (const field of standardFields) {
-        const org = toRefString(field);
-        if (org?.startsWith('Organization/')) return org;
+    if (r.resourceType !== 'Patient' && r.resourceType !== 'Practitioner' && r.resourceType !== 'RelatedPerson') {
+        const idents = Array.isArray(r.identifier) ? r.identifier : (r.identifier ? [r.identifier] : []);
+        for (const ident of idents) {
+            const ref = toRefString(ident?.assigner);
+            if (ref?.startsWith('Organization/')) return ref;
+        }
     }
 
     if (Array.isArray(r.extension)) {
-        const orgExt = r.extension.find((e: any) => e.url?.includes('Organization') || e.url?.includes('FromOrg'));
-        const org = toRefString(orgExt?.valueReference);
-        if (org?.startsWith('Organization/')) return org;
+        const orgExt = r.extension.find((e: any) => 
+            e.url?.includes('Organization') || e.url?.includes('FromOrg')
+        );
+        const ref = toRefString(orgExt?.valueReference);
+        if (ref?.startsWith('Organization/')) return ref;
     }
 
     return null;
