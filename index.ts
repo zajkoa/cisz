@@ -5,6 +5,7 @@ import stateStore from "@/core/store/index";
 import { newRec } from "@/core/db";
 import { openPanel } from "@/core/layouts";
 import { toastError } from '@/core/helpers/toastify';
+import { query, ResultResponse } from "@/core/components/DB/api";
 
 
 import ViewCISZ from './components/ViewCISZ/index.vue';
@@ -286,5 +287,28 @@ export async function loadReference(reference: string) {
         return resource;
     } catch (error) {
         return null;
+    }
+}
+
+/**
+ * Обновление стора информацией из ЦИСЗ
+ * @param store 
+ * @param resource 
+ */
+export async function updateFromResource(store: any, resource: any) {
+    if (resource) {
+        const response: any = await parseResource(resource);
+
+        if (response.complete) {
+            const { table, data } = response.data;
+
+            const responseNotion: ResultResponse = await query({ table, method: 'notion', data });
+
+            if (responseNotion.complete) {
+                store.loadData(responseNotion.data);
+            }
+        } else {
+            toastError(response.message);
+        }
     }
 }
