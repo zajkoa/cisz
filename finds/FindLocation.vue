@@ -5,7 +5,7 @@
 				<div class="col-4">
 					<DBEdit :form="form" field="contragent" selectMode />
 				</div>
-				<div class="col-6">
+				<div class="col">
 					<DBEdit :form="form" field="name" />
 				</div>
 			</div>
