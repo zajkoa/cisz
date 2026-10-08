@@ -451,6 +451,16 @@ export default class extends ListStatusController {
 				if (result == null) {
 					return null;
 				} else {
+					const data = await this.client.request(result.reference);
+
+					if (data) {
+						const { resourceType } = data;
+
+						if (resourceType == 'Patient') {
+							Object.assign(patientResource, data);
+						}
+					}
+
 					await query({
 						table: 'patients',
 						method: 'save',
@@ -471,7 +481,7 @@ export default class extends ListStatusController {
 			}
 		);
 
-		// return null;
+		return null;
 
 		if (response.complete) {
 			stateStore.state.load = true;
