@@ -481,7 +481,7 @@ export default class extends ListStatusController {
 			}
 		);
 
-		return null;
+		//return null;
 
 		if (response.complete) {
 			stateStore.state.load = true;
