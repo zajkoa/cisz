@@ -5,6 +5,9 @@
 				<div class="col">
 					<DBEdit :form="form" field="name" />
 				</div>
+				<div class="col-2">
+					<DBEdit :form="form" field="count" />
+				</div>
 			</div>
 			<div class="form-group row">
 				<div class="col-auto">
@@ -53,21 +56,47 @@ export default defineComponent({
 		const grid = ref(null);
 		const form = ref(null);
 
-		const storeParams = new DBStoreRecord('find_contragents_params', {
-			fields: {
-				name: {
-					description: 'Наименование',
-					type: 'STRING',
-					validation: {
-						isRequired
+		const storeParams = new DBStoreRecord(
+			'find_contragents_params',
+			{
+				fields: {
+					name: {
+						description: 'Наименование',
+						type: 'STRING',
+						validation: {
+							isRequired
+						}
+					},
+					location: {
+						description: 'Поиск структурного подразделения',
+						type: 'BOOLEAN'
+					},
+					count: {
+						description: 'Кол-во',
+						type: {
+							enum: [
+								{
+									id: 10,
+									name: '10'
+								},
+								{
+									id: 25,
+									name: '25'
+								},
+								{
+									id: 50,
+									name: '50'
+								},
+								{
+									id: 100,
+									name: '100'
+								}
+							]
+						}
 					}
-				},
-				location: {
-					description: 'Поиск структурного подразделения',
-					type: 'BOOLEAN'
 				}
 			}
-		});
+		);
 
 		const config = {
 			key: 'id',
@@ -125,7 +154,10 @@ export default defineComponent({
 		}
 
 		onMounted(async () => {
-			await storeParams.defaultsData(defaults);
+			await storeParams.defaultsData({
+				count: 10,
+				...defaults
+			});
 
 			grid.value.controller.createPanelFun([
 				{
@@ -139,7 +171,9 @@ export default defineComponent({
 							const params = [];
 
 							if (await form.value.validation()) {
-								const { name, location } = storeParams.data;
+								const { name, location, count } = storeParams.data;
+
+								if (count) params.push(`_count=${count}`);
 
 								if (name) params.push(`name=${name}`);
 

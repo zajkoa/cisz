@@ -311,8 +311,6 @@ class ClientCISZ {
                 headers
             }
 
-            console.log(params);
-
             const response = await fetch(url, params);
 
             stateStore.state.load = false;
