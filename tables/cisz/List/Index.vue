@@ -32,14 +32,15 @@ import { useRoute } from 'vue-router';
 
 import bus from '@/core/bus';
 import stateStore from '@/core/store/index';
+import { fio } from '@/core/helpers/utils';
 import { editRecId } from '@/core/db';
 import { setCaption } from '@/core/layouts';
 import { toastError } from '@/core/helpers/toastify';
 import { availableRole } from "@/core/helpers/access";
+
 import { openReference } from '@/cisz';
 
 import ListController from './controller';
-import { fio } from '@/core/helpers/utils';
 
 export default defineComponent({
 	setup() {
