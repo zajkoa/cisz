@@ -182,35 +182,67 @@ export default defineComponent({
 								if (identifiers > 1) {
 									const data = await client.request(`Patient?${params.join('&')}`);
 
-									if (data) {
-										if (data.resourceType == 'Bundle') {
-											let found = false;
-											const { entry = [] } = data;
+									if (data?.resourceType === 'Bundle') {
+										let found = false;
+										const { entry = [] } = data;
 
-											for (const resource of entry) {
-												if (resource.resource.resourceType == 'Patient') {
-													found = true;
+										for (const item of entry) {
+											const patientRes = item.resource;
+											if (patientRes?.resourceType !== 'Patient') continue;
 
-													const response = await parseResource(resource.resource);
+											found = true;
 
-													if (response.complete) {
-														const { data } = response.data;
+											const profiles = [
+												'https://fhir.by/StructureDefinition/RelatedPersonPermanentBy',
+												'https://fhir.by/StructureDefinition/RelatedPersonTemporaryBy'
+											];
 
-														store.push({ data, patient: data.name, dateofbirth: data.dateofbirth, resource: resource.resource });
-													} else {
-														toastError(response.message);
+											const relatedPersons = [];
+
+											for (const prof of profiles) {
+												try {
+													const rpBundle = await client.request(
+														`Patient/${patientRes.id}/RelatedPerson?patient=${patientRes.id}&_profile=${prof}`
+													);
+
+													if (rpBundle?.resourceType === 'Bundle' && Array.isArray(rpBundle.entry)) {
+														for (const rpEntry of rpBundle.entry) {
+															if (rpEntry.resource?.resourceType === 'RelatedPerson') {
+																relatedPersons.push(rpEntry.resource);
+															}
+														}
 													}
+												} catch (e) {
+
 												}
 											}
 
-											if (!found) toastError('Не найдена информация по пациенту!');
+											if (relatedPersons.length > 0) {
+												patientRes._relatedPersons = relatedPersons;
+											}
+
+											const response = await parseResource(patientRes);
+
+											if (response.complete) {
+												const { data: parsedData } = response.data;
+												store.push({ 
+													data: parsedData, 
+													patient: parsedData.name, 
+													dateofbirth: parsedData.dateofbirth, 
+													resource: patientRes 
+												});
+											} else {
+												toastError(response.message);
+											}
 										}
 
-										if (data.resourceType == 'OperationOutcome') {
-											for (const issue of data.issue) {
-												if (issue.severity == 'error') {
-													toastError(issue.diagnostics);
-												}
+										if (!found) toastError('Не найдена информация по пациенту!');
+									}
+
+									if (data?.resourceType === 'OperationOutcome') {
+										for (const issue of data.issue || []) {
+											if (issue.severity === 'error') {
+												toastError(issue.diagnostics);
 											}
 										}
 									}
