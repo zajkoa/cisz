@@ -20,6 +20,7 @@ import ViewJSON from '@/core/components/ViewJSON/index.vue';
 import { openPanel } from "@/core/layouts";
 import { onRenderValue } from '../../json_editor'
 import { viewResource } from '../../api'
+import { resolveQuestionnaires } from '../../questionnaireResolver';
 import { availableRole } from "@/core/helpers/access";
 
 import ViewCISZItem from './ViewCISZItem.vue';
@@ -52,6 +53,12 @@ export default defineComponent({
 
         const loadResource = async (resource) => {
             notion.value = [];
+
+            try {
+                await resolveQuestionnaires(resource);
+            } catch (e) {
+                console.error(e);
+            }
 
             const data = await viewResource(resource);
             if (data && data.length > 0) {
