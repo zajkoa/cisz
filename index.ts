@@ -15,8 +15,9 @@ import { clientCISZ } from "./ClientCISZ"
 
 import FindPatients from "./finds/FindPatients.vue";
 import FindLocation from "./finds/FindLocation.vue";
-import FindContragent from "./finds/FindContragent.vue";
+import FindPosition from "./finds/FindPosition.vue";
 import FindEmployees from "./finds/FindEmployees.vue";
+import FindContragent from "./finds/FindContragent.vue";
 import FindMedicaments from "./finds/FindMedicaments.vue";
 import FindRelatedPerson from "./finds/FindRelatedPerson.vue";
 
@@ -120,6 +121,35 @@ export async function findFindRelatedPerson(defaults: any = {}, select = false) 
             onClose: (data: any) => resolve(data)
         })
     })
+}
+
+export async function findPositions(defaults: any = {}, select = true) {
+    return new Promise((resolve) => {
+        openPanel({
+            modal: true,
+            width: '80%',
+            caption: 'Поиск должности',
+            onCreate: (panel: any) => {
+                const buttons = [];
+
+                if (select) {
+                    buttons.push({
+                        select: {
+                            class: "btn btn-action",
+                            caption: 'Выбрать',
+                            onClick: () => {
+                                const data = panel.ref.store.currentData();
+                                if (data) panel.close(data);
+                            }
+                        }
+                    });
+                }
+
+                return { component: h(FindPosition, { panel, select, defaults }), buttons };
+            },
+            onClose: (data: any) => resolve(data)
+        });
+    });
 }
 
 export async function findEmployees(defaults: any = {}, select = false) {
