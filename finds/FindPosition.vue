@@ -251,10 +251,6 @@ export default defineComponent({
 					}
 				}
 			]);
-
-			if (defaults?.name) {
-				await searchPositions(0);
-			}
 		});
 
 		return {
