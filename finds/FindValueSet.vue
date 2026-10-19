@@ -12,7 +12,7 @@
 		</template>
 	</DBForm>
 
-	<div class="d-flex justify-content-between align-items-center" v-if="total > 0">
+	<div class="d-flex justify-content-between align-items-center mb-1" v-if="total > 0">
 		<div class="text-muted small">
 			Найдено: {{ total }} (показаны {{ currentRange }})
 		</div>
@@ -28,9 +28,9 @@
 				<i class="icon icon-chevron-left"></i> Назад
 			</button>
 
-            <span class="px-2 d-flex align-items-center">
-                Страница {{ currentPage }} из {{ totalPages }}
-            </span>
+			<span class="px-2 d-flex align-items-center">
+				Страница {{ currentPage }} из {{ totalPages }}
+			</span>
 
 			<button 
 				type="button" 
@@ -72,7 +72,24 @@ export default defineComponent({
 		select: {
 			type: Boolean,
 			default: true
-		}
+		},
+		system: {
+			type: String,
+			default: ''
+		},
+		searchLabel: {
+			type: String,
+			default: 'Наименование'
+		},
+        fields: {
+            type: Object,
+            default: () => undefined
+        },
+        transformItem: {
+            type: Function,
+            default: undefined
+        }
+
 	},
 
 	setup(props) {
@@ -87,11 +104,11 @@ export default defineComponent({
 		const offset = ref(0);
 
 		const storeParams = new DBStoreRecord(
-			'find_positions_params',
+			'find_valueset_params',
 			{
 				fields: {
 					name: {
-						description: 'Наименование',
+						description: props.searchLabel,
 						type: 'STRING',
 						validation: {
 							isRequired
@@ -135,6 +152,17 @@ export default defineComponent({
 			return `${from}–${to}`;
 		});
 
+		const defaultFields = {
+			code: {
+				description: 'Код',
+				type: 'STRING'
+			},
+			display: {
+				description: 'Наименование',
+				type: 'STRING'
+			}
+		};
+
 		const config = {
 			key: 'code',
 			menu: false,
@@ -142,19 +170,10 @@ export default defineComponent({
 			searchpanel: false,
 			height: '350px',
 			selectMode: true,
-			fields: {
-				code: {
-					description: 'Код',
-					type: 'STRING'
-				},
-				display: {
-					description: 'Наименование',
-					type: 'STRING'
-				}
-			}
+			fields: props.fields || defaultFields
 		};
 
-		const store = new DBStore('find_positions', config);
+		const store = new DBStore('find_valueset_store', config);
 		store.model.offLine = true;
 
 		const onSelect = (data) => {
@@ -163,7 +182,7 @@ export default defineComponent({
 			}
 		};
 
-		const searchPositions = async (newOffset = 0) => {
+		const searchData = async (newOffset = 0) => {
 			if (await form.value.validation()) {
 				loading.value = true;
 				store.clear();
@@ -176,13 +195,20 @@ export default defineComponent({
 					const countParam = currentCount.value;
 					const offsetParam = offset.value;
 
+					let queryTarget = '';
+					if (props.system) {
+						queryTarget = `system=${encodeURIComponent(props.system)}`;
+					} else {
+						toastError('Не указан справочник (system / url) для поиска');
+						return;
+					}
+
 					const res = await client.request(
-						`ValueSet/$expand?system=SpecialtyProfPerson&filter=${filterParam}&count=${countParam}&offset=${offsetParam}`
+						`ValueSet/$expand?${queryTarget}&filter=${filterParam}&count=${countParam}&offset=${offsetParam}`
 					);
 
 					if (res?.resourceType === 'ValueSet' && res.expansion) {
 						total.value = res.expansion.total ?? (res.expansion.contains?.length || 0);
-
 						const items = res.expansion.contains || [];
 
 						if (items.length === 0) {
@@ -191,13 +217,15 @@ export default defineComponent({
 						}
 
 						for (const item of items) {
-							const eksd = item.property?.find(p => p.code === 'code_EKSD')?.valueString || '';
-
-							store.push({
-								code: item.code,
-								display: item.display,
-								eksd
-							});
+							if (props.transformItem) {
+								store.push(props.transformItem(item));
+							} else {
+								store.push({
+									code: item.code,
+									display: item.display,
+									system: item.system
+								});
+							}
 						}
 					} else if (res?.resourceType === 'OperationOutcome') {
 						const msg = res.issue?.[0]?.diagnostics || 'Ошибка при поиске в ЦИСЗ';
@@ -217,20 +245,20 @@ export default defineComponent({
 		const onNextPage = async () => {
 			const nextOffset = offset.value + currentCount.value;
 			if (nextOffset < total.value) {
-				await searchPositions(nextOffset);
+				await searchData(nextOffset);
 			}
 		};
 
 		const onPrevPage = async () => {
 			const prevOffset = Math.max(0, offset.value - currentCount.value);
-			await searchPositions(prevOffset);
+			await searchData(prevOffset);
 		};
 
 		watch(
 			() => storeParams.data.count,
 			() => {
 				if (total.value > 0) {
-					searchPositions(0);
+					searchData(0);
 				}
 			}
 		);
@@ -247,7 +275,7 @@ export default defineComponent({
 						caption: 'Поиск',
 						title: 'Поиск',
 						class: 'btn btn-add',
-						onClick: async () => await searchPositions(0)
+						onClick: async () => await searchData(0)
 					}
 				}
 			]);

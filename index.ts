@@ -13,6 +13,7 @@ import HtmlCISZ from './components/HtmlCISZ/index.vue'
 import PatientInfo from "./PatientInfo/index.vue"
 import { clientCISZ } from "./ClientCISZ"
 
+import FindValueSet from "./finds/FindValueSet.vue";
 import FindPatients from "./finds/FindPatients.vue";
 import FindLocation from "./finds/FindLocation.vue";
 import FindPosition from "./finds/FindPosition.vue";
@@ -93,6 +94,101 @@ export async function patientSummaryInfo(defaults: any = {}) {
     })
 }
 
+export interface FindValueSetOptions {
+    system?: string;
+    caption?: string;
+    searchLabel?: string;
+    width?: string;
+    fields?: Record<string, any>;
+    transformItem?: (item: any) => any;
+    defaults?: any;
+    select?: boolean;
+}
+
+export async function findValueSet(options: FindValueSetOptions) {
+    const {
+        system = '',
+        caption = 'Поиск по справочнику',
+        searchLabel = 'Наименование',
+        width = '80%',
+        fields,
+        transformItem,
+        defaults = {},
+        select = true
+    } = options;
+
+    return new Promise((resolve) => {
+        openPanel({
+            modal: true,
+            width,
+            caption,
+            onCreate: (panel: any) => {
+                const buttons = [];
+
+                if (select) {
+                    buttons.push({
+                        select: {
+                            class: "btn btn-action",
+                            caption: 'Выбрать',
+                            onClick: () => {
+                                const data = panel.ref.store.currentData();
+                                if (data) panel.close(data);
+                            }
+                        }
+                    });
+                }
+
+                const componentProps: Record<string, any> = {
+                    panel,
+                    select,
+                    defaults,
+                    system,
+                    searchLabel
+                };
+
+                if (fields) componentProps.fields = fields;
+                if (transformItem) componentProps.transformItem = transformItem;
+
+                return { 
+                    component: h(FindValueSet, componentProps), 
+                    buttons 
+                };
+            },
+            onClose: (data: any) => resolve(data)
+        });
+    });
+}
+
+export async function findPositions(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'SpecialtyProfPerson',
+        caption: 'Поиск должности',
+        searchLabel: 'Наименование должности',
+        defaults,
+        select
+    });
+}
+
+export async function findReceivingMethod(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'MethodOfObtaining',
+        caption: 'Поиск способа получения биопсийного (операционного) материала',
+        searchLabel: 'Наименование способа получения материала',
+        defaults,
+        select
+    });
+}
+
+export async function findTypesMaterial(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'AnatomicalTerminology',
+        caption: 'Поиск вида биопсийного (операционного) материала',
+        searchLabel: 'Наименование вида материала',
+        defaults,
+        select
+    });
+}
+
 export async function findFindRelatedPerson(defaults: any = {}, select = false) {
     return new Promise((resolve) => {
         openPanel({
@@ -121,35 +217,6 @@ export async function findFindRelatedPerson(defaults: any = {}, select = false) 
             onClose: (data: any) => resolve(data)
         })
     })
-}
-
-export async function findPositions(defaults: any = {}, select = true) {
-    return new Promise((resolve) => {
-        openPanel({
-            modal: true,
-            width: '80%',
-            caption: 'Поиск должности',
-            onCreate: (panel: any) => {
-                const buttons = [];
-
-                if (select) {
-                    buttons.push({
-                        select: {
-                            class: "btn btn-action",
-                            caption: 'Выбрать',
-                            onClick: () => {
-                                const data = panel.ref.store.currentData();
-                                if (data) panel.close(data);
-                            }
-                        }
-                    });
-                }
-
-                return { component: h(FindPosition, { panel, select, defaults }), buttons };
-            },
-            onClose: (data: any) => resolve(data)
-        });
-    });
 }
 
 export async function findEmployees(defaults: any = {}, select = false) {
