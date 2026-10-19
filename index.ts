@@ -169,6 +169,26 @@ export async function findPositions(defaults: any = {}, select = true) {
     });
 }
 
+export async function findReceivingMethod(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'MethodOfObtaining',
+        caption: 'Поиск способа получения биопсийного (операционного) материала',
+        searchLabel: 'Наименование способа получения материала',
+        defaults,
+        select
+    });
+}
+
+export async function findTypesMaterial(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'AnatomicalTerminology',
+        caption: 'Поиск вида биопсийного (операционного) материала',
+        searchLabel: 'Наименование вида материала',
+        defaults,
+        select
+    });
+}
+
 export async function findFindRelatedPerson(defaults: any = {}, select = false) {
     return new Promise((resolve) => {
         openPanel({
