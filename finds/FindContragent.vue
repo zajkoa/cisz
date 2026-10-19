@@ -1,245 +1,104 @@
 <template>
-	<DBForm :store="storeParams" ref="form">
-		<template v-slot="form">
+	<FindResource
+		:panel="panel" :defaults="defaults" :select="select"
+		:formFields="formFields" :gridFields="gridFields"
+		:buildQuery="buildQuery" :transformItem="transformItem"
+	>
+		<template v-slot="scope">
 			<div class="form-row">
 				<div class="col">
-					<DBEdit :form="form" field="name" />
+					<DBEdit :form="scope.form" field="name" />
 				</div>
 				<div class="col-2">
-					<DBEdit :form="form" field="count" />
+					<DBEdit :form="scope.form" field="count" />
 				</div>
 			</div>
 			<div class="form-group row">
 				<div class="col-auto">
-					<DBEdit :form="form" field="location" />
+					<DBEdit :form="scope.form" field="location" />
 				</div>
 			</div>
 		</template>
-	</DBForm>
-
-	<DBGrid :store="store" :config="config" @select="data => onSelect(data)" ref="grid"></DBGrid>
+	</FindResource>
 </template>
 
 <script>
-import { defineComponent, onMounted, ref } from 'vue'
-
-import DBStore from '@/core/db_store';
-import DBStoreRecord from '@/core/db_store_record';
+import { defineComponent } from 'vue';
 import { isRequired } from '@/core/helpers/validators';
 import { toastError } from '@/core/helpers/toastify';
-
-import { clientCISZ } from '../ClientCISZ';
 import { parseResource } from '../api';
-import { createFromResurce, openReference } from '../index';
+import FindResource from './FindResource.vue';
 
 export default defineComponent({
-	inheritAttrs: false,
+	components: { FindResource },
+	props: ['panel', 'defaults', 'select'],
 
-	props: {
-		panel: {
-			type: Object,
-			default: () => ({})
-		},
-		defaults: {
-			type: Object,
-			default: () => ({})
-		},
-		select: {
-			type: Boolean
-		}
-	},
-
-	setup(props) {
-		const { panel, select, defaults } = props;
-		const client = clientCISZ();
-
-		const grid = ref(null);
-		const form = ref(null);
-
-		const storeParams = new DBStoreRecord(
-			'find_contragents_params',
-			{
-				fields: {
-					name: {
-						description: 'Наименование',
-						type: 'STRING',
-						validation: {
-							isRequired
-						}
-					},
-					location: {
-						description: 'Поиск структурного подразделения',
-						type: 'BOOLEAN'
-					},
-					count: {
-						description: 'Кол-во',
-						type: {
-							enum: [
-								{
-									id: 10,
-									name: '10'
-								},
-								{
-									id: 25,
-									name: '25'
-								},
-								{
-									id: 50,
-									name: '50'
-								},
-								{
-									id: 100,
-									name: '100'
-								}
-							]
-						}
-					}
-				}
-			}
-		);
-
-		const config = {
-			key: 'id',
-			menu: false,
-			view: false,
-			searchpanel: false,
-			height: '300px',
-			selectMode: true,
-			fields: {
-				id: {
-					type: 'GUID',
-					config: {
-						hide: true
-					}
-				},
+	setup() {
+		return {
+			formFields: {
 				name: {
-					description: "Наименование",
-					type: 'STRING'
-				},
-				data: {
-					description: "Ресурс",
-					type: 'JSON',
-					config: {
-						hide: true
+					description: 'Наименование',
+					type: 'STRING',
+					validation: {
+						isRequired
 					}
 				},
-				resource: {
-					description: "Ресурс",
-					type: 'JSON',
-					config: {
-						hide: true
+				location: {
+					description: 'Поиск структурного подразделения',
+					type: 'BOOLEAN'
+				},
+				count: {
+					description: 'Кол-во',
+					type: {
+						enum: [
+							{
+								id: 10,
+								name: '10'
+							},
+							{
+								id: 25,
+								name: '25'
+							},
+							{
+								id: 50,
+								name: '50'
+							},
+							{
+								id: 100,
+								name: '100'
+							}
+						]
 					}
 				}
 			},
-			cellClick: {
-				name: async (data) => {
-					const { resourceType, id } = data.resource;
-
-					await openReference(`${resourceType}/${id}`);
+			gridFields: {
+				name: {
+					description: "Наименование",
+					type: 'STRING'
 				}
-			}
-		}
-
-		const store = new DBStore('find_contragents', config);
-		store.model.offLine = true;
-
-		const onSelect = async (data) => {
-			if (data) {
-				if (select) {
-					panel.close(data.data);
-				} else {
-					await createFromResurce(data.resource);
+			},
+			buildQuery: (data) => {
+				const params = [];
+				if (data.count) params.push(`_count=${data.count}`);
+				if (data.name) params.push(`name=${data.name}`);
+				
+				if (params.length === 0) {
+					toastError('Необходимо указать параметры для поиска!');
+					return null;
 				}
-			}
-		}
-
-		onMounted(async () => {
-			await storeParams.defaultsData({
-				count: 10,
-				...defaults
-			});
-
-			grid.value.controller.createPanelFun([
-				{
-					secondary: {
-						caption: 'Поиск',
-						title: 'Поиск',
-						class: 'btn btn-add',
-						onClick: async () => {
-							store.clear();
-
-							const params = [];
-
-							if (await form.value.validation()) {
-								const { name, location, count } = storeParams.data;
-
-								if (count) params.push(`_count=${count}`);
-
-								if (name) params.push(`name=${name}`);
-
-								if (params.length > 0) {
-									const data = await client.request(`${location ? 'Location' : 'Organization'}?${params.join('&')}`);
-
-									if (data) {
-										if (data.resourceType == 'Bundle') {
-											let found = false;
-
-											const { entry = [] } = data;
-
-											for (const resource of entry) {
-												if (resource.resource.resourceType == 'Organization') {
-													found = true;
-
-													const organization = await parseResource(resource.resource);
-
-													if (organization.complete) {
-														store.push({ name: organization.data.data.name, data: organization.data.data, resource: resource.resource });
-													} else {
-														toastError(organization.message);
-													}
-												}
-
-												if (resource.resource.resourceType == 'Location') {
-													found = true;
-
-													const location = await parseResource(resource.resource);
-
-													if (location.complete) {
-														store.push({ name: location.data.data.name, data: location.data.data, resource: resource.resource });
-													} else {
-														toastError(location.message);
-													}
-												}
-											}
-
-											if (!found) toastError('Не найдена информация по организациям!');
-										}
-
-										if (data.resourceType == 'OperationOutcome') {
-											for (const issue of data.issue) {
-												if (issue.severity == 'error') {
-													toastError(issue.diagnostics);
-												}
-											}
-										}
-									}
-								} else {
-									toastError('Необходимо указать параметры для поиска!');
-								}
-							}
-						}
+				return `${data.location ? 'Location' : 'Organization'}?${params.join('&')}`;
+			},
+			transformItem: async (resource) => {
+				if (resource.resourceType === 'Organization' || resource.resourceType === 'Location') {
+					const parsed = await parseResource(resource);
+					if (parsed.complete) {
+						return { name: parsed.data.data.name, data: parsed.data.data, resource };
+					} else {
+						toastError(parsed.message);
 					}
 				}
-			]);
-		})
-
-		return {
-			onSelect,
-			form,
-			grid,
-			store,
-			config,
-			storeParams
+				return null;
+			}
 		}
 	}
 })

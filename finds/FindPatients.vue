@@ -1,93 +1,65 @@
 <template>
-	<DBForm :store="storeParams" ref="form">
-		<template v-slot="form">
+	<FindResource
+		:panel="panel" :defaults="defaults" :select="select"
+		:formFields="formFields" :gridFields="gridFields"
+		:buildQuery="buildQuery" :transformItem="transformItem"
+	>
+		<template v-slot="scope">
 			<div class="form-row">
 				<div class="col-5">
-					<DBEdit :form="form" field="name" clear />
+					<DBEdit :form="scope.form" field="name" clear />
 				</div>
 				<div class="col-3">
-					<DBEdit :form="form" field="dateofbirth" clear />
+					<DBEdit :form="scope.form" field="dateofbirth" clear />
 				</div>
 				<div class="col-4">
-					<DBEdit :form="form" field="personal_number" clear />
+					<DBEdit :form="scope.form" field="personal_number" clear />
 				</div>
 			</div>
 		</template>
-	</DBForm>
-
-	<DBGrid :store="store" :config="config" @select="data => onSelect(data)" ref="grid"></DBGrid>
+	</FindResource>
 </template>
 
 <script>
-import { defineComponent, onMounted, onUnmounted, ref } from 'vue';
-
+import { defineComponent, onMounted, onUnmounted } from 'vue';
 import bus from '@/core/bus';
-import DBStore from '@/core/db_store';
-import DBStoreRecord from '@/core/db_store_record';
 import { toastError } from '@/core/helpers/toastify';
-
-import { clientCISZ } from '../ClientCISZ';
 import { parseResource } from '../api';
-import { createFromResurce, openReference } from '../index';
+import { clientCISZ } from '../ClientCISZ';
+import FindResource from './FindResource.vue';
 
 export default defineComponent({
-	inheritAttrs: false,
-
-	props: {
-		panel: {
-			type: Object,
-			default: () => ({})
-		},
-		defaults: {
-			type: Object,
-			default: () => ({})
-		},
-		select: {
-			type: Boolean
-		}
-	},
+	components: { FindResource },
+	props: ['panel', 'defaults', 'select'],
 
 	setup(props) {
-		const { panel, select, defaults } = props;
 		const client = clientCISZ();
 
-		const grid = ref(null);
-		const form = ref(null);
-
-		const storeParams = new DBStoreRecord(
-			'find_patients_params',
-			{
-				fields: {
-					name: {
-						description: 'ФИО',
-						type: 'STRING'
-					},
-					personal_number: {
-						description: 'Идентификатор',
-						type: 'STRING'
-					},
-					dateofbirth: {
-						description: 'Дата рождения',
-						type: 'DATEONLY'
-					}
-				}
+		const onSaveData = async (saveData) => {
+			if (saveData.table === "patients" && saveData.newrecord) {
+				props.panel.close(saveData.data);
 			}
-		);
+		};
 
-		const config = {
-			key: 'id',
-			menu: false,
-			view: false,
-			searchpanel: false,
-			height: '300px',
-			selectMode: true,
-			fields: {
-				id: {
-					type: 'GUID',
-					config: {
-						hide: true
-					}
+		onMounted(() => bus.$on('save-data', onSaveData));
+		onUnmounted(() => bus.$off('save-data', onSaveData));
+
+		return {
+			formFields: {
+				name: {
+					description: 'ФИО',
+					type: 'STRING'
 				},
+				personal_number: {
+					description: 'Идентификатор',
+					type: 'STRING'
+				},
+				dateofbirth: {
+					description: 'Дата рождения',
+					type: 'DATEONLY'
+				}
+			},
+			gridFields: {
 				patient: {
 					description: "Ф.И.О.",
 					type: 'STRING'
@@ -95,178 +67,67 @@ export default defineComponent({
 				dateofbirth: {
 					description: 'Дата рождения',
 					type: 'DATEONLY'
-				},
-				data: {
-					description: "Данные",
-					type: 'JSON',
-					config: {
-						hide: true
-					}
-				},
-				resource: {
-					description: "Ресурс",
-					type: 'JSON',
-					config: {
-						hide: true
-					}
 				}
 			},
-			cellClick: {
-				patient: async (data) => {
-					const { id, resourceType } = data.resource;
+			buildQuery: (data) => {
+				const params = [];
+				let identifiers = 0;
 
-					await openReference(`${resourceType}/${id}`);
+				if (data.personal_number) {
+					identifiers += 2;
+					params.push(`identifier=${data.personal_number.trim()}`);
 				}
-			}
-		}
-
-		const store = new DBStore('find_patients', config);
-		store.model.offLine = true;
-
-		const onSelect = async (data) => {
-			if (data) {
-				if (select) {
-					panel.close(data.data);
-				} else {
-					await createFromResurce(data.resource);
+				if (data.name) {
+					identifiers += 1;
+					params.push(`name=${data.name.trim()}`);
 				}
-			}
-		}
-
-		const onSaveData = async (saveData) => {
-			const { table, newrecord, data } = saveData;
-
-			if (table == "patients") {
-				if (newrecord) {
-					panel.close(data);
+				if (data.dateofbirth) {
+					identifiers += 1;
+					params.push(`birthdate=${data.dateofbirth}`);
 				}
-			}
-		}
 
-		onMounted(async () => {
-			bus.$on('save-data', onSaveData);
+				if (identifiers <= 1) {
+					toastError('Необходимо ввести более одного параметра для поиска!');
+					return null;
+				}
 
-			await storeParams.defaultsData(defaults);
+				return `Patient?${params.join('&')}`;
+			},
+			transformItem: async (resource) => {
+				if (resource.resourceType !== 'Patient') return null;
 
-			grid.value.controller.createPanelFun([
-				{
-					find: {
-						caption: 'Поиск',
-						title: 'Поиск',
-						class: 'btn btn-add',
-						onClick: async () => {
-							store.clear();
+				const profiles = [
+					'https://fhir.by/StructureDefinition/RelatedPersonPermanentBy',
+					'https://fhir.by/StructureDefinition/RelatedPersonTemporaryBy'
+				];
 
-							const params = [];
-
-							if (await form.value.validation()) {
-								const { name, personal_number, dateofbirth } = storeParams.data;
-
-								let identifiers = 0;
-
-								if (personal_number) {
-									identifiers += 2;
-									params.push(`identifier=${personal_number.trim()}`);
-								}
-
-								if (name) {
-									identifiers += 1;
-									params.push(`name=${name.trim()}`);
-								}
-
-								if (dateofbirth) {
-									identifiers += 1;
-									params.push(`birthdate=${dateofbirth}`);
-								}
-
-								if (identifiers > 1) {
-									const data = await client.request(`Patient?${params.join('&')}`);
-
-									if (data?.resourceType === 'Bundle') {
-										let found = false;
-										const { entry = [] } = data;
-
-										for (const item of entry) {
-											const patientRes = item.resource;
-											if (patientRes?.resourceType !== 'Patient') continue;
-
-											found = true;
-
-											const profiles = [
-												'https://fhir.by/StructureDefinition/RelatedPersonPermanentBy',
-												'https://fhir.by/StructureDefinition/RelatedPersonTemporaryBy'
-											];
-
-											const relatedPersons = [];
-
-											for (const prof of profiles) {
-												try {
-													const rpBundle = await client.request(
-														`Patient/${patientRes.id}/RelatedPerson?patient=${patientRes.id}&_profile=${prof}`
-													);
-
-													if (rpBundle?.resourceType === 'Bundle' && Array.isArray(rpBundle.entry)) {
-														for (const rpEntry of rpBundle.entry) {
-															if (rpEntry.resource?.resourceType === 'RelatedPerson') {
-																relatedPersons.push(rpEntry.resource);
-															}
-														}
-													}
-												} catch (e) {
-
-												}
-											}
-
-											if (relatedPersons.length > 0) {
-												patientRes._relatedPersons = relatedPersons;
-											}
-
-											const response = await parseResource(patientRes);
-
-											if (response.complete) {
-												const { data: parsedData } = response.data;
-												store.push({ 
-													data: parsedData, 
-													patient: parsedData.name, 
-													dateofbirth: parsedData.dateofbirth, 
-													resource: patientRes 
-												});
-											} else {
-												toastError(response.message);
-											}
-										}
-
-										if (!found) toastError('Не найдена информация по пациенту!');
-									}
-
-									if (data?.resourceType === 'OperationOutcome') {
-										for (const issue of data.issue || []) {
-											if (issue.severity === 'error') {
-												toastError(issue.diagnostics);
-											}
-										}
-									}
-								} else {
-									toastError('Необходимо ввести более одного параметра для поиска!');
+				const relatedPersons = [];
+				for (const prof of profiles) {
+					try {
+						const rpBundle = await client.request(`Patient/${resource.id}/RelatedPerson?patient=${resource.id}&_profile=${prof}`);
+						if (rpBundle?.resourceType === 'Bundle') {
+							for (const rpEntry of rpBundle.entry || []) {
+								if (rpEntry.resource?.resourceType === 'RelatedPerson') {
+									relatedPersons.push(rpEntry.resource);
 								}
 							}
 						}
-					}
+					} catch (e) {}
 				}
-			]);
-		})
 
-		onUnmounted(() => {
-			bus.$off('save-data', onSaveData);
-		})
+				if (relatedPersons.length > 0) {
+					resource._relatedPersons = relatedPersons;
+				}
 
-		return {
-			onSelect,
-			form,
-			grid,
-			store,
-			config,
-			storeParams
+				const response = await parseResource(resource);
+				if (response.complete) {
+					const parsedData = response.data.data;
+					return { data: parsedData, patient: parsedData.name, dateofbirth: parsedData.dateofbirth, resource };
+				} else {
+					toastError(response.message);
+				}
+				return null;
+			}
 		}
 	}
 })
