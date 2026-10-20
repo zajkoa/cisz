@@ -3,8 +3,7 @@
 		:panel="panel" :defaults="defaults" :select="select"
 		:formFields="formFields" :gridFields="gridFields"
 		:buildQuery="buildQuery" :transformItem="transformItem"
-		:onSaveRecord="onSaveRecord"
-	>
+		:onSaveRecord="onSaveRecord">
 		<template v-slot="scope">
 			<div class="form-row">
 				<div class="col">
@@ -17,13 +16,17 @@
 
 <script>
 import { defineComponent } from 'vue';
+
 import { isRequired } from '@/core/helpers/validators';
-import FindResource from './FindResource.vue';
-import { viewResource } from '../api';
 import { toastError } from '@/core/helpers/toastify';
+
+import { viewResource } from '@/cisz/api';
+
+import FindResource from './FindResource.vue';
 
 export default defineComponent({
 	components: { FindResource },
+
 	props: ['panel', 'defaults', 'select'],
 
 	setup() {

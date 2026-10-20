@@ -18,13 +18,7 @@
 		</div>
 
 		<div class="btn-group btn-group-sm">
-			<button 
-				type="button" 
-				class="btn btn-light border" 
-				:disabled="offset <= 0 || loading" 
-				@click="onPrevPage"
-				title="Предыдущая страница"
-			>
+			<button type="button" class="btn btn-light border" :disabled="offset <= 0 || loading" @click="onPrevPage" title="Предыдущая страница">
 				<i class="icon icon-chevron-left"></i> Назад
 			</button>
 
@@ -32,13 +26,7 @@
 				Страница {{ currentPage }} из {{ totalPages }}
 			</span>
 
-			<button 
-				type="button" 
-				class="btn btn-light border" 
-				:disabled="offset + currentCount >= total || loading" 
-				@click="onNextPage"
-				title="Следующая страница"
-			>
+			<button type="button" class="btn btn-light border" :disabled="offset + currentCount >= total || loading" @click="onNextPage" title="Следующая страница">
 				Вперед <i class="icon icon-chevron-right"></i>
 			</button>
 		</div>
@@ -55,7 +43,7 @@ import DBStoreRecord from '@/core/db_store_record';
 import { isRequired } from '@/core/helpers/validators';
 import { toastError } from '@/core/helpers/toastify';
 
-import { clientCISZ } from '../ClientCISZ';
+import { clientCISZ } from '@/cisz/ClientCISZ';
 
 export default defineComponent({
 	inheritAttrs: false,
@@ -81,14 +69,14 @@ export default defineComponent({
 			type: String,
 			default: 'Наименование'
 		},
-        fields: {
-            type: Object,
-            default: () => undefined
-        },
-        transformItem: {
-            type: Function,
-            default: undefined
-        }
+		fields: {
+			type: Object,
+			default: () => undefined
+		},
+		transformItem: {
+			type: Function,
+			default: undefined
+		}
 
 	},
 
@@ -119,21 +107,21 @@ export default defineComponent({
 						type: {
 							enum: [
 								{
-                                    id: 10,
-                                    name: '10'
-                                },
+									id: 10,
+									name: '10'
+								},
 								{
-                                    id: 25,
-                                    name: '25'
-                                },
+									id: 25,
+									name: '25'
+								},
 								{
-                                    id: 50,
-                                    name: '50'
-                                },
+									id: 50,
+									name: '50'
+								},
 								{
-                                    id: 100,
-                                    name: '100'
-                                }
+									id: 100,
+									name: '100'
+								}
 							]
 						}
 					}
@@ -196,16 +184,16 @@ export default defineComponent({
 					const offsetParam = offset.value;
 
 					let queryTarget = '';
+
 					if (props.system) {
 						queryTarget = `system=${encodeURIComponent(props.system)}`;
 					} else {
 						toastError('Не указан справочник (system / url) для поиска');
+
 						return;
 					}
 
-					const res = await client.request(
-						`ValueSet/$expand?${queryTarget}&filter=${filterParam}&count=${countParam}&offset=${offsetParam}`
-					);
+					const res = await client.request(`ValueSet/$expand?${queryTarget}&filter=${filterParam}&count=${countParam}&offset=${offsetParam}`);
 
 					if (res?.resourceType === 'ValueSet' && res.expansion) {
 						total.value = res.expansion.total ?? (res.expansion.contains?.length || 0);
@@ -213,6 +201,7 @@ export default defineComponent({
 
 						if (items.length === 0) {
 							toastError('Записи не найдены');
+
 							return;
 						}
 

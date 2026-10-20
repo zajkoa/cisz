@@ -3,12 +3,11 @@
 		ref="findRef"
 		:panel="panel" :defaults="defaults" :select="select"
 		:formFields="formFields" :gridFields="gridFields"
-		:buildQuery="buildQuery" :transformItem="transformItem"
-	>
+		:buildQuery="buildQuery" :transformItem="transformItem">
 		<template v-slot="scope">
 			<div class="form-row">
 				<div class="col-4">
-					<DBEdit :form="scope.form" field="contragent" selectMode 
+					<DBEdit :form="scope.form" field="contragent" selectMode
 						@select="data => scope.storeParams.data.reference = data ? data.reference : null" />
 				</div>
 				<div class="col">
@@ -21,13 +20,18 @@
 
 <script>
 import { defineComponent, onMounted, ref } from 'vue';
-import { toastError } from '@/core/helpers/toastify';
+
 import { query } from '@/core/components/DB/api';
-import { parseResource } from '../api';
+import { toastError } from '@/core/helpers/toastify';
+import { isRequired } from "@/core/helpers/validators";
+
+import { parseResource } from '@/cisz/api';
+
 import FindResource from './FindResource.vue';
 
 export default defineComponent({
 	components: { FindResource },
+
 	props: ['panel', 'defaults', 'select'],
 
 	setup(props) {
@@ -36,6 +40,7 @@ export default defineComponent({
 		onMounted(async () => {
 			if (props.defaults?.contragent && findRef.value) {
 				const response = await query({ table: 'contragents', method: 'object', data: { id: props.defaults.contragent }, params: { fields: ['id', 'reference'] } });
+
 				if (response.complete && response.data?.reference) {
 					findRef.value.storeParams.data.reference = response.data.reference;
 				}
@@ -48,9 +53,7 @@ export default defineComponent({
 				name: {
 					description: 'Наименование',
 					type: 'STRING',
-					validation: {
-						// isRequired
-					}
+					validation: {}
 				},
 				contragent: {
 					description: 'Организация',
@@ -89,13 +92,16 @@ export default defineComponent({
 			},
 			buildQuery: (data) => {
 				const params = [];
+
 				if (data.name) params.push(`name=${data.name}`);
+
 				if (data.reference) params.push(`organization=${data.reference}`);
-				
+
 				if (params.length === 0) {
 					toastError('Необходимо указать параметры для поиска!');
 					return null;
 				}
+
 				return `Location?${params.join('&')}`;
 			},
 			transformItem: async (resource) => {
@@ -107,6 +113,7 @@ export default defineComponent({
 						toastError(location.message);
 					}
 				}
+
 				return null;
 			}
 		}

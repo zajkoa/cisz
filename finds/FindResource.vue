@@ -16,46 +16,47 @@ import DBStore from '@/core/db_store';
 import DBStoreRecord from '@/core/db_store_record';
 import { toastError } from '@/core/helpers/toastify';
 
-import { clientCISZ } from '../ClientCISZ';
-import { createFromResurce, openReference } from '../index';
+import { clientCISZ } from '@/cisz/ClientCISZ';
+import { createFromResurce, openReference } from '@/cisz/index';
 
 export default defineComponent({
 	name: 'FindResource',
+
 	inheritAttrs: false,
 
 	props: {
 		panel: {
-            type: Object,
-            default: () => ({})
-        },
+			type: Object,
+			default: () => ({})
+		},
 		defaults: {
-            type: Object,
-            default: () => ({})
-        },
+			type: Object,
+			default: () => ({})
+		},
 		select: {
-            type: Boolean,
-            default: false
-        },
+			type: Boolean,
+			default: false
+		},
 		formFields: {
-            type: Object,
-            required: true
-        },
+			type: Object,
+			required: true
+		},
 		gridFields: {
-            type: Object,
-            required: true
-        },
+			type: Object,
+			required: true
+		},
 		buildQuery: {
-            type: Function,
-            required: true
-        },
+			type: Function,
+			required: true
+		},
 		transformItem: {
-            type: Function,
-            required: true
-        },
+			type: Function,
+			required: true
+		},
 		onSaveRecord: {
-            type: Function,
-            default: null
-        } 
+			type: Function,
+			default: null
+		}
 	},
 
 	setup(props) {
@@ -76,26 +77,26 @@ export default defineComponent({
 			selectMode: true,
 			fields: {
 				id: {
-                    type: 'GUID',
-                    config: {
-                        hide: true
-                    }
-                },
+					type: 'GUID',
+					config: {
+						hide: true
+					}
+				},
 				...props.gridFields,
 				data: {
-                    description: "Данные",
-                    type: 'JSON',
-                    config: {
-                        hide: true
-                    }
-                },
+					description: "Данные",
+					type: 'JSON',
+					config: {
+						hide: true
+					}
+				},
 				resource: {
-                    description: "Ресурс",
-                    type: 'JSON',
-                    config: {
-                        hide: true
-                    }
-                }
+					description: "Ресурс",
+					type: 'JSON',
+					config: {
+						hide: true
+					}
+				}
 			},
 			cellClick: {
 				name: async (data) => {
@@ -119,7 +120,7 @@ export default defineComponent({
 		const onSelect = async (data) => {
 			if (data) {
 				if (props.select) {
-					props.panel.close(data.data || data); 
+					props.panel.close(data.data || data);
 				} else {
 					if (props.onSaveRecord) {
 						await props.onSaveRecord(data);
@@ -135,7 +136,7 @@ export default defineComponent({
 
 			if (await formRef.value.validation()) {
 				const queryUrl = props.buildQuery(storeParams.data);
-				if (!queryUrl) return; 
+				if (!queryUrl) return;
 
 				const response = await client.request(queryUrl);
 

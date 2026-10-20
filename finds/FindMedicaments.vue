@@ -2,8 +2,7 @@
 	<FindResource
 		:panel="panel" :defaults="defaults" :select="select"
 		:formFields="formFields" :gridFields="gridFields"
-		:buildQuery="buildQuery" :transformItem="transformItem"
-	>
+		:buildQuery="buildQuery" :transformItem="transformItem">
 		<template v-slot="scope">
 			<div class="form-row">
 				<div class="col">
@@ -21,13 +20,17 @@
 
 <script>
 import { defineComponent } from 'vue';
+
 import { isRequired } from '@/core/helpers/validators';
 import { toastError } from '@/core/helpers/toastify';
-import { parseResource } from '../api';
+
+import { parseResource } from '@/cisz/api';
+
 import FindResource from './FindResource.vue';
 
 export default defineComponent({
 	components: { FindResource },
+
 	props: ['panel', 'defaults', 'select'],
 
 	setup() {
@@ -61,7 +64,7 @@ export default defineComponent({
 			},
 			buildQuery: (data) => {
 				if (!data.name) return null;
-				
+
 				const params = [];
 				if (+data.type === 1) {
 					params.push(`_profile=https://fhir.by/StructureDefinition/MedicationBy`);

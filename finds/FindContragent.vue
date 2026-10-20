@@ -2,8 +2,7 @@
 	<FindResource
 		:panel="panel" :defaults="defaults" :select="select"
 		:formFields="formFields" :gridFields="gridFields"
-		:buildQuery="buildQuery" :transformItem="transformItem"
-	>
+		:buildQuery="buildQuery" :transformItem="transformItem">
 		<template v-slot="scope">
 			<div class="form-row">
 				<div class="col">
@@ -26,7 +25,9 @@
 import { defineComponent } from 'vue';
 import { isRequired } from '@/core/helpers/validators';
 import { toastError } from '@/core/helpers/toastify';
-import { parseResource } from '../api';
+
+import { parseResource } from '@/cisz/api';
+
 import FindResource from './FindResource.vue';
 
 export default defineComponent({
@@ -81,7 +82,7 @@ export default defineComponent({
 				const params = [];
 				if (data.count) params.push(`_count=${data.count}`);
 				if (data.name) params.push(`name=${data.name}`);
-				
+
 				if (params.length === 0) {
 					toastError('Необходимо указать параметры для поиска!');
 					return null;

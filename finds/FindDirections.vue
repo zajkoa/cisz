@@ -32,9 +32,9 @@ import DBStoreRecord from '@/core/db_store_record';
 import { query } from '@/core/components/DB/api';
 import { toastError } from '@/core/helpers/toastify';
 
-import { clientCISZ } from '../ClientCISZ';
-import { openReference } from '../index';
-import { parseResource } from '../api';
+import { clientCISZ } from '@/cisz/ClientCISZ';
+import { openReference } from '@/cisz/index';
+import { parseResource } from '@/cisz/api';
 
 export default defineComponent({
 	inheritAttrs: false,

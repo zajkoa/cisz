@@ -3,8 +3,7 @@
 		:panel="panel" :defaults="defaults" :select="select"
 		:formFields="formFields" :gridFields="gridFields"
 		:buildQuery="buildQuery" :transformItem="transformItem"
-		:onSaveRecord="onSaveRecord"
-	>
+		:onSaveRecord="onSaveRecord">
 		<template v-slot="scope">
 			<div class="form-row">
 				<div class="col-5">
@@ -23,11 +22,14 @@
 
 <script>
 import { defineComponent } from 'vue';
-import { viewResource } from '../api';
+
+import { viewResource } from '@/cisz/api';
+
 import FindResource from './FindResource.vue';
 
 export default defineComponent({
 	components: { FindResource },
+
 	props: ['panel', 'defaults', 'select'],
 
 	setup() {

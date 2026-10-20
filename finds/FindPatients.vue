@@ -2,8 +2,7 @@
 	<FindResource
 		:panel="panel" :defaults="defaults" :select="select"
 		:formFields="formFields" :gridFields="gridFields"
-		:buildQuery="buildQuery" :transformItem="transformItem"
-	>
+		:buildQuery="buildQuery" :transformItem="transformItem">
 		<template v-slot="scope">
 			<div class="form-row">
 				<div class="col-5">
@@ -22,14 +21,18 @@
 
 <script>
 import { defineComponent, onMounted, onUnmounted } from 'vue';
+
 import bus from '@/core/bus';
 import { toastError } from '@/core/helpers/toastify';
-import { parseResource } from '../api';
-import { clientCISZ } from '../ClientCISZ';
+
+import { parseResource } from '@/cisz/api';
+import { clientCISZ } from '@/cisz/ClientCISZ';
+
 import FindResource from './FindResource.vue';
 
 export default defineComponent({
 	components: { FindResource },
+
 	props: ['panel', 'defaults', 'select'],
 
 	setup(props) {
@@ -105,6 +108,7 @@ export default defineComponent({
 				for (const prof of profiles) {
 					try {
 						const rpBundle = await client.request(`Patient/${resource.id}/RelatedPerson?patient=${resource.id}&_profile=${prof}`);
+
 						if (rpBundle?.resourceType === 'Bundle') {
 							for (const rpEntry of rpBundle.entry || []) {
 								if (rpEntry.resource?.resourceType === 'RelatedPerson') {
@@ -112,7 +116,7 @@ export default defineComponent({
 								}
 							}
 						}
-					} catch (e) {}
+					} catch (e) { }
 				}
 
 				if (relatedPersons.length > 0) {
@@ -120,12 +124,14 @@ export default defineComponent({
 				}
 
 				const response = await parseResource(resource);
+
 				if (response.complete) {
 					const parsedData = response.data.data;
 					return { data: parsedData, patient: parsedData.name, dateofbirth: parsedData.dateofbirth, resource };
 				} else {
 					toastError(response.message);
 				}
+
 				return null;
 			}
 		}
