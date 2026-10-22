@@ -238,6 +238,26 @@ export async function findReceivingMethod(defaults: any = {}, select = true) {
     });
 }
 
+export async function findAllergyCauses(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'AllergyIntoleranceCauses',
+        caption: 'Поиск причины аллергической реакции',
+        searchLabel: 'Наименование причины аллергической реакции',
+        defaults,
+        select
+    });
+}
+
+export async function findAllergyMeasures(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'AEReportMeasures',
+        caption: 'Поиск предпринятых меры при аллергической реакции',
+        searchLabel: 'Наименование предпринятых меры при аллергической реакции',
+        defaults,
+        select
+    });
+}
+
 export async function findTypesMaterial(defaults: any = {}, select = true) {
     return findValueSet({
         system: 'AnatomicalTerminology',
