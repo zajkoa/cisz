@@ -16,7 +16,6 @@ import { clientCISZ } from "./ClientCISZ"
 import FindValueSet from "./finds/FindValueSet.vue";
 import FindPatients from "./finds/FindPatients.vue";
 import FindLocation from "./finds/FindLocation.vue";
-import FindPosition from "./finds/FindPosition.vue";
 import FindEmployees from "./finds/FindEmployees.vue";
 import FindContragent from "./finds/FindContragent.vue";
 import FindMedicaments from "./finds/FindMedicaments.vue";
@@ -156,6 +155,66 @@ export async function findValueSet(options: FindValueSetOptions) {
             },
             onClose: (data: any) => resolve(data)
         });
+    });
+}
+
+ export async function findHplReasonUse(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'HospitalisationReasonUse',
+        caption: 'Поиск вида госпитализации',
+        searchLabel: 'Наименование вида госпитализации',
+        defaults,
+        select
+    });
+}
+
+export async function findTypeHealthCare(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'TypeOfHealthCare',
+        caption: 'Поиск медицинской помощи',
+        searchLabel: 'Наименование медицинской помощи',
+        defaults,
+        select
+    });
+}
+
+export async function findHplProfiles(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'BedProfile',
+        caption: 'Поиск профиля коек',
+        searchLabel: 'Наименование профиля коек',
+        defaults,
+        select
+    });
+}
+
+export async function findHplSpecialty(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'ServiceSpecialtyBy',
+        caption: 'Поиск специализации медицинских услуг',
+        searchLabel: 'Наименование специализации медицинских услуг',
+        defaults,
+        select
+    });
+}
+
+export async function findHplCategory(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'HealthcareServiceCategory',
+        caption: 'Поиск категории медицинских услуг',
+        searchLabel: 'Наименование категории медицинских услуг',
+        defaults,
+        select
+    });
+}
+
+export async function findHplPurpose(defaults: any = {}, select = true) {
+    return findValueSet({
+        system: 'HospitalisationGoals',
+        caption: 'Поиск цели госпитализации',
+        searchLabel: 'Наименование цели госпитализации',
+        defaults,
+        select
     });
 }
 

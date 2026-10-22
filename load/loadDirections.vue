@@ -60,11 +60,17 @@ export default defineComponent({
 		defaults: {
 			type: Object,
 			default: () => ({})
+		},
+		type: {
+			type: String,
+			default: 'pgi'
 		}
 	},
 
 	setup(props) {
-		const { defaults } = props;
+		const { defaults, type = 'pgi' } = props;
+		const isHpl = type === 'hpl';
+		const table = isHpl ? 'hpl' : 'pgi';
 
 		const client = clientCISZ();
 
@@ -223,24 +229,29 @@ export default defineComponent({
 						await client.loadReference(requester);
 						await client.loadReference(subject);
 
-						await client.loadReference(reason, subject.reference);
-						await client.loadReference(specimen, subject.reference);
+						await client.loadReference(reason, subject?.reference);
+						if (specimen) await client.loadReference(specimen, subject?.reference);
 
 						const response = await parseResource(row.resource);
 
 						if (response.complete) {
+							const docNumber = response.data.data.number_direct || response.data.data.number || '';
+							const docTitle = isHpl
+								? `Направление на госпитализацию № ${docNumber}`
+								: `Направление на исследование № ${docNumber}`;
+
 							const direction = {
-								name: `Направление на исследование № ${response.data.data.number_direct}`,
+								name: docTitle,
 								location: null,
 								data: null,
 								resource: row.resource
 							}
 
-							const responsePGINotion = await query({ table: 'pgi', method: 'notion', data: response.data.data });
+							const responsePGINotion = await query({ table, method: 'notion', data: response.data.data });
 
 							if (responsePGINotion.complete) {
 
-								responsePGINotion.data.status = 2;
+								responsePGINotion.data.status = isHpl ? 1 : 2;
 
 								if (typeof responsePGINotion.data.patient == 'object') {
 									direction.patient = responsePGINotion.data.patient?.name
@@ -250,7 +261,7 @@ export default defineComponent({
 
 								direction.location = responsePGINotion.data._customer;
 								direction.status = status;
-								direction.date_send = responsePGINotion.data.date_send;
+								direction.date_send = responsePGINotion.data.date_send || responsePGINotion.data.time_reg;
 								direction.data = responsePGINotion.data;
 							}
 
@@ -296,11 +307,18 @@ export default defineComponent({
 		const findDirections = async () => {
 			const { reference, authored, count } = storeParams.data;
 
+			const profile = isHpl
+				? "https://fhir.by/StructureDefinition/ServiceRequestHospitalisation"
+				: "https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch";
+
 			const params = {
-				"code-concept": "patho-histology",
-				_profile: "https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch",
+				_profile: profile,
 				_count: count,
 				status: "active"
+			}
+
+			if (!isHpl) {
+				params["code-concept"] = "patho-histology";
 			}
 
 			if (reference) {
