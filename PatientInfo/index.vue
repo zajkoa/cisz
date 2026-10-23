@@ -109,16 +109,33 @@ const statuses = [
 ]
 
 const SERVICEREQUEST = [
-    {
-        id: "https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch",
-        name: "Направление на исследование биологического материала",
-        statuses
-    },
-    {
-        id: "https://fhir.by/StructureDefinition/ServiceRequestUltrasound",
-        name: "Направление на ультразвуковое исследование",
-        statuses
-    }
+	{
+		id: "https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch",
+		name: "Направление на исследование биологического материала",
+		table: 'pgi',
+		numberField: 'number_direct',
+		defaultStatus: 2,
+		dateField: 'date_collect',
+		statuses
+	},
+	{
+		id: "https://fhir.by/StructureDefinition/ServiceRequestUltrasound",
+		name: "Направление на ультразвуковое исследование",
+		table: 'pgi',
+		numberField: 'number_direct',
+		defaultStatus: 2,
+		dateField: 'date_collect',
+		statuses
+	},
+	{
+		id: "https://fhir.by/StructureDefinition/ServiceRequestHospitalisation",
+		name: "Направление на госпитализацию",
+		table: 'hpl',
+		numberField: 'number',
+		defaultStatus: 1,
+		dateField: 'time_reg',
+		statuses
+	},
 ];
 
 export default {
@@ -181,7 +198,26 @@ export default {
                             },
                             onSelect: async (data) => {
                                 if (data) {
-                                    store.data.reference = data.reference;
+                                    if (data.reference) {
+                                        store.data.reference = data.reference;
+                                    } else {
+                                        const response = await query({
+                                            table: 'patients',
+                                            method: 'object',
+                                            data: {
+                                                id: data.id
+                                            },
+                                            params: {
+                                                fields: ['id', 'reference']
+                                            }
+                                        });
+
+                                        if (response.complete && response.data?.reference) {
+                                            store.data.reference = response.data.reference;
+                                        } else {
+                                            store.data.reference = null;
+                                        }
+                                    }
                                 } else {
                                     store.data.reference = null;
                                 }
@@ -438,22 +474,40 @@ export default {
                                     const response = await parseResource(row.resource);
 
                                     if (response.complete) {
+                                        const profileItem = SERVICEREQUEST.find((el) => el.id === profileDirection);
+
+                                        if (!profileItem) {
+                                            toastError('Неизвестный профиль направления');
+                                            continue;
+                                        }
+
+                                        const {
+                                            name: caption,
+                                            table,
+                                            numberField,
+                                            defaultStatus,
+                                            dateField
+                                        } = profileItem;
+
+                                        const data = response.data.data;
+                                        const docNumber = data[numberField] || '';
+
                                         const direction = {
-                                            name: `Направление на исследование № ${response.data.data.number_direct}`,
+                                            name: `${caption} № ${docNumber}`,
                                             location: null,
                                             data: null,
                                             resource: row.resource
                                         }
 
-                                        const responsePGINotion = await query({ table: 'pgi', method: 'notion', data: response.data.data });
+                                        const responseNotion = await query({ table, method: 'notion', data });
 
-                                        if (responsePGINotion.complete) {
-                                            responsePGINotion.data.status = 2;
+                                        if (responseNotion.complete) {
+                                            responseNotion.data.status = defaultStatus;
 
-                                            direction.location = responsePGINotion.data._customer;
+                                            direction.location = responseNotion.data._customer;
                                             direction.status = status;
-                                            direction.date_collect = responsePGINotion.data.date_collect;
-                                            direction.data = responsePGINotion.data;
+                                            direction.date_collect = responseNotion.data[dateField] || responseNotion.data.date_collect;
+                                            direction.data = responseNotion.data;
                                         }
 
                                         storeDirections.push(direction);
