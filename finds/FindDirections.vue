@@ -47,11 +47,31 @@ export default defineComponent({
 		defaults: {
 			type: Object,
 			default: () => ({})
+		},
+		profile: {
+			type: String,
+			default: 'https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch'
+		},
+		searchParams: {
+			type: Object,
+			default: () => ({ 'code-concept': 'patho-histology' })
+		},
+		table: {
+			type: String,
+			default: 'pgi'
+		},
+		caption: {
+			type: String,
+			default: 'Направление на исследование биологического материала'
+		},
+		defaultStatus: {
+			type: Number,
+			default: 2
 		}
 	},
 
 	setup(props) {
-		const { panel, defaults } = props;
+		const { panel, defaults, profile, searchParams, table, caption, defaultStatus } = props;
 
 		const client = clientCISZ();
 
@@ -305,10 +325,10 @@ export default defineComponent({
 			storeDirections.clear();
 
 			const params = {
-				"code-concept": "patho-histology",
-				_profile: "https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch",
+				_profile: profile,
 				performer: `Organization/${client.organizationId}`,
-				status: "active"
+				status: "active",
+				...searchParams
 			}
 
 			const resource = await client.request(`${patient}/ServiceRequest?${Object.entries(params).map(([key, value]) => `${key}=${value}`).join('&')}`);
@@ -321,29 +341,30 @@ export default defineComponent({
 						const { resourceType } = row.resource;
 
 						if (resourceType == 'ServiceRequest') {
-							const { location, requester, reason, specimen, subject } = row.resource;
+							const { requester, reason, specimen, subject } = row.resource;
 
-							// await client.loadReference(location);
 							await client.loadReference(requester);
 							await client.loadReference(subject);
 
 							await client.loadReference(reason, subject.reference);
-							await client.loadReference(specimen, subject.reference);
+							if (specimen) await client.loadReference(specimen, subject.reference);
 
 							found = true;
 
 							const response = await parseResource(row.resource);
 
 							if (response.complete) {
-								const responsePGINotion = await query({ table: 'pgi', method: 'notion', data: response.data.data });
+								const responseNotion = await query({ table, method: 'notion', data: response.data.data });
 
-								if (responsePGINotion.complete) {
-									responsePGINotion.data.status = 2;
+								if (responseNotion.complete) {
+									responseNotion.data.status = defaultStatus;
+
+									const docNumber = response.data.data.number_direct || response.data.data.number || '';
 
 									storeDirections.push({
-										name: `Направление на исследование биологического материала № ${response.data.data.number_direct}`,
-										data: responsePGINotion.data,
-										location: responsePGINotion.data._customer,
+										name: `${caption} № ${docNumber}`,
+										data: responseNotion.data,
+										location: responseNotion.data._customer,
 										resource: row.resource
 									});
 								}

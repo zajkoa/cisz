@@ -61,16 +61,30 @@ export default defineComponent({
 			type: Object,
 			default: () => ({})
 		},
-		type: {
+		profile: {
+			type: String,
+			default: 'https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch'
+		},
+		searchParams: {
+			type: Object,
+			default: () => ({ 'code-concept': 'patho-histology' })
+		},
+		table: {
 			type: String,
 			default: 'pgi'
+		},
+		caption: {
+			type: String,
+			default: 'Направление на исследование'
+		},
+		defaultStatus: {
+			type: Number,
+			default: 2
 		}
 	},
 
 	setup(props) {
-		const { defaults, type = 'pgi' } = props;
-		const isHpl = type === 'hpl';
-		const table = isHpl ? 'hpl' : 'pgi';
+		const { defaults, profile, searchParams, table, caption, defaultStatus } = props;
 
 		const client = clientCISZ();
 
@@ -236,33 +250,29 @@ export default defineComponent({
 
 						if (response.complete) {
 							const docNumber = response.data.data.number_direct || response.data.data.number || '';
-							const docTitle = isHpl
-								? `Направление на госпитализацию № ${docNumber}`
-								: `Направление на исследование № ${docNumber}`;
 
 							const direction = {
-								name: docTitle,
+								name: `${caption} № ${docNumber}`,
 								location: null,
 								data: null,
 								resource: row.resource
 							}
 
-							const responsePGINotion = await query({ table, method: 'notion', data: response.data.data });
+							const responseNotion = await query({ table, method: 'notion', data: response.data.data });
 
-							if (responsePGINotion.complete) {
+							if (responseNotion.complete) {
+								responseNotion.data.status = defaultStatus;
 
-								responsePGINotion.data.status = isHpl ? 1 : 2;
-
-								if (typeof responsePGINotion.data.patient == 'object') {
-									direction.patient = responsePGINotion.data.patient?.name
+								if (typeof responseNotion.data.patient == 'object') {
+									direction.patient = responseNotion.data.patient?.name
 								} else {
-									direction.patient = responsePGINotion.data._patient;
+									direction.patient = responseNotion.data._patient;
 								}
 
-								direction.location = responsePGINotion.data._customer;
+								direction.location = responseNotion.data._customer;
 								direction.status = status;
-								direction.date_send = responsePGINotion.data.date_send || responsePGINotion.data.time_reg;
-								direction.data = responsePGINotion.data;
+								direction.date_send = responseNotion.data.date_send || responseNotion.data.time_reg;
+								direction.data = responseNotion.data;
 							}
 
 							storeDirections.push(direction);
@@ -307,18 +317,11 @@ export default defineComponent({
 		const findDirections = async () => {
 			const { reference, authored, count } = storeParams.data;
 
-			const profile = isHpl
-				? "https://fhir.by/StructureDefinition/ServiceRequestHospitalisation"
-				: "https://fhir.by/StructureDefinition/ServiceRequestBioMatResearch";
-
 			const params = {
 				_profile: profile,
 				_count: count,
-				status: "active"
-			}
-
-			if (!isHpl) {
-				params["code-concept"] = "patho-histology";
+				status: "active",
+				...searchParams
 			}
 
 			if (reference) {
