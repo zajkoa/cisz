@@ -19,7 +19,9 @@ import FindLocation from "./finds/FindLocation.vue";
 import FindEmployees from "./finds/FindEmployees.vue";
 import FindContragent from "./finds/FindContragent.vue";
 import FindMedicaments from "./finds/FindMedicaments.vue";
+import FindPractitioner from "./finds/FindPractitioner.vue";
 import FindRelatedPerson from "./finds/FindRelatedPerson.vue";
+import FindPractitionerRole from "./finds/FindPractitionerRole.vue";
 
 import { parseResource } from "./api";
 
@@ -449,6 +451,60 @@ export async function findPatients(defaults: any = {}, select = false, notFound 
             onClose: (data: any) => resolve(data)
         })
     })
+}
+
+export async function findPractitioner(defaults: any = {}, select = false) {
+    return new Promise((resolve) => {
+        openPanel({
+            modal: true,
+            width: '80%',
+            caption: 'Поиск медицинского работника в ЦИСЗ',
+            onCreate: (panel: any) => {
+                const buttons = [];
+                if (select) {
+                    buttons.push({
+                        select: {
+                            class: "btn btn-action",
+                            caption: 'Выбрать',
+                            onClick: () => {
+                                const data = panel.ref.store.currentData();
+                                if (data) panel.close(data.data || data);
+                            }
+                        }
+                    });
+                }
+                return { component: h(FindPractitioner, { panel, select, defaults }), buttons };
+            },
+            onClose: (data: any) => resolve(data)
+        });
+    });
+}
+
+export async function findPractitionerRole(defaults: any = {}, select = false) {
+    return new Promise((resolve) => {
+        openPanel({
+            modal: true,
+            width: '80%',
+            caption: 'Поиск роли сотрудника в ЦИСЗ',
+            onCreate: (panel: any) => {
+                const buttons = [];
+                if (select) {
+                    buttons.push({
+                        select: {
+                            class: "btn btn-action",
+                            caption: 'Выбрать',
+                            onClick: () => {
+                                const data = panel.ref.store.currentData();
+                                if (data) panel.close(data.data || data);
+                            }
+                        }
+                    });
+                }
+                return { component: h(FindPractitionerRole, { panel, select, defaults }), buttons };
+            },
+            onClose: (data: any) => resolve(data)
+        });
+    });
 }
 
 export async function loadReference(reference: string) {

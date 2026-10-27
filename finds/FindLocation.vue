@@ -70,10 +70,12 @@ export default defineComponent({
 								limit: 10
 							}
 						},
-						onSelect: async (data) => {
+						onSelect: async (data, store) => {
 							if (data) {
-								store.data.reference = data.reference;
+								store.data.contragent = data.id;
+								store.data.reference = data.reference || null;
 							} else {
+								store.data.contragent = null;
 								store.data.reference = null;
 							}
 						}

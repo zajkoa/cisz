@@ -135,7 +135,7 @@ export default defineComponent({
 			store.clear();
 
 			if (await formRef.value.validation()) {
-				const queryUrl = props.buildQuery(storeParams.data);
+				const queryUrl = await props.buildQuery(storeParams.data);
 				if (!queryUrl) return;
 
 				const response = await client.request(queryUrl);

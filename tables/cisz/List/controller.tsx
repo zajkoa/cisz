@@ -12,6 +12,7 @@ import { toastError, toastSuccess, toastWarning } from "@/core/helpers/toastify"
 
 import { clientCISZ } from "@/cisz/ClientCISZ";
 import { findPatients } from "@/cisz";
+import { runBundleProcessors } from '@/cisz/bundleProcessors';
 import { ciszInfo, createBundle, getPatientReference, setResult } from "@/cisz/api";
 
 export default class extends ListStatusController {
@@ -649,6 +650,9 @@ export default class extends ListStatusController {
 							this.showMessage(response.data);
 						} else {
 							toastSuccess(response.message);
+							if (status == 5) {
+								runBundleProcessors(data.id, this.client);
+							}
 						}
 					} else {
 						toastError(response.message);
